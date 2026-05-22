@@ -1,33 +1,62 @@
 #include <stdio.h>
-#include <ctype.h> 
+#include <ctype.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 /* INTEGRANTES:
 - ANDRE DOERNER DUARTE - 10427938
 - MATHEUS LEONARDO CARDOSO KROEFF - 10426434
 - NAOTO USHIZAKI - 10437445
 */
+
 // ---------------------------------------------------------------- //
-// Iniciando a Maquina:
-char input[1024];  // entrada do user
-int le_posicao = 0; // posicao atual da leitura
+// Iniciando a Máquina:
+char input[1024];   // entrada do user
+int le_posicao = 0; // posição atual da leitura
 
-// Recebendo simbolos:
+// ---------------------------------------------------------------- //
+// Ignora espaços em branco
+void pular_espacos(void){
+    while (isspace((unsigned char)input[le_posicao])) {
+        le_posicao++;
+    }
+}
+
+// Recebendo símbolos:
 char lendo(void){
-    // retorna o caracter lido na posição atual do analisador
-    return input[le_posicao]; 
-}   
+    pular_espacos();
+    return input[le_posicao];
+}
 
-// Checa se simbolo do input do usuário == simbolos da gramática dada
+// Checa se símbolo do input do usuário == símbolo esperado da gramática
 int check_symbol(char simbolo){
-    if(input[le_posicao] == simbolo){
+    pular_espacos();
+    if(input[le_posicao] == simbolo){ 
         le_posicao++; // incrementa se caracter existe na gramatica
         return 1; // Sucesso
     }
-    return 0; //  Devolve/return 0 se não pertencer
+    return 0;  //  Devolve/return 0 se não pertencer
 }
 
-// Inicializando funcões para cada símbolo não-terminal(não recebem parâmetros):
+// ---------------------------------------------------------------- //
+void download(int passo, int total){
+    int width = 30;
+    int preenche = (passo * width) / total;
+
+    printf("\r[");
+    for(int a = 0; a < preenche; a++)
+        printf("█");
+
+    for(int b = preenche; b < width; b++)
+        printf(" ");
+
+    printf("] %d%%", (passo * 100) / total);
+    fflush(stdout);
+}
+
+// ---------------------------------------------------------------- //
+// Inicializando funções para cada símbolo não-terminal(não recebem parâmetros):
 // Necessário iniciar assim porque elas vão se chamar depois.
 int I(void);
 int S(void);
@@ -37,28 +66,34 @@ int Z(void);
 int F(void);
 int N(void);
 int D(void);
-// ---------------------------------------------------------------- //
 
+// ---------------------------------------------------------------- //
 // Função do parse -> decide se, depois de analisar a expressão inteira, se a cadeia
 // pertence ou não à gramática:
 int parse(void){
     le_posicao = 0;
-    if(I() && input[le_posicao] == '\0'){ // '\0' -> sinaliza o fim 
-        return 1;
+    pular_espacos();
+
+    if(I()){
+        pular_espacos();
+        if(input[le_posicao] == '\0'){
+            return 1;
+        }
     }
     return 0;
 }
 
 // ---------------------------------------------------------------- //
-// Funções seguindo as regras:
+// Regras da gramática:
 int I(void){
     int pos_I = le_posicao;
-    if(S()){ // Checa se o próximo símbolo é reconhecível
+    if(S()){   // Checa se o próximo símbolo é reconhecível
         return 1;
     }
     le_posicao = pos_I; // se falhar o reconhecimento de simbolo -> restaura posição inicial (pos_I)
-    return 0; // falha
+    return 0;  // falha
 }
+
 // ---------------------------------------------------------------- //
 int S(void){
     int pos_S = le_posicao;
@@ -68,6 +103,7 @@ int S(void){
     le_posicao = pos_S;
     return 0;
 }
+
 // ---------------------------------------------------------------- //
 int K(void){
     int pos_K = le_posicao;
@@ -81,6 +117,7 @@ int K(void){
     }
 
     pos_K = le_posicao;
+
     // Tratar o operador '-' que K le:
     if(check_symbol('-')){
         if(T() && K()){
@@ -88,9 +125,10 @@ int K(void){
         }
         le_posicao = pos_K;
     }
-    // Aceita se escolher ignorar (conjunto vazio)    
-    return 1;
+
+    return 1; // Aceita se escolher ignorar (conjunto vazio)    
 }
+
 // ---------------------------------------------------------------- //
 int T(void){
     int pos_T = le_posicao;
@@ -99,9 +137,9 @@ int T(void){
         return 1;
     }
     le_posicao = pos_T;
-   
     return 0;
 }
+
 // ---------------------------------------------------------------- //
 int Z(void){
     int pos_Z = le_posicao;
@@ -115,7 +153,7 @@ int Z(void){
         le_posicao = pos_Z;
     }
 
-    pos_Z = le_posicao; 
+    pos_Z = le_posicao;
 
     // Verifica se o símbolo lido é "/" e se os símbolo F e Z são lidos também:
     if(check_symbol('/')){
@@ -127,8 +165,9 @@ int Z(void){
 
     return 1; // pode ignorar
 }
+
 // ---------------------------------------------------------------- //
-int F(){
+int F(void){
     int pos_F = le_posicao;
 
     // Checa se F tem o simbolo -> parenteses e se S é algo que ele está lendo:
@@ -146,20 +185,22 @@ int F(){
     }
 
     le_posicao = pos_F;
-
     if(check_symbol('-')){
         if(N()){
             return 1;
         }
         le_posicao = pos_F;
-    }   
+    }
 
     return 0;
 }
+
 // ---------------------------------------------------------------- //
 int N(void){
-    // Testar do 1 a 9:
+    pular_espacos();
+
     int pos_N = le_posicao;
+
     if(input[le_posicao] >= '1' && input[le_posicao] <= '9'){
         le_posicao++;
 
@@ -167,36 +208,113 @@ int N(void){
             return 1;
         }
     }
-    le_posicao = pos_N;
 
+    le_posicao = pos_N;
     return 0;
 }
+
 // ---------------------------------------------------------------- //
 int D(void){
+    pular_espacos();
+
     // Checa se char atual analisado -> é dígito: assim incrementa posição.
     while(isdigit((unsigned char)input[le_posicao])){
         le_posicao++;
     }
     // Ignora -> conjunto vazio:
-    return 1;
+    return 1; 
+}
+
+// ---------------------------------------------------------------- //
+// Limpa o buffer do teclado após scanf
+void limpar_buffer(void){
+    int c;
+    while((c = getchar()) != '\n' && c != EOF);
 }
 
 // ---------------------------------------------------------------- //
 // MAIN CONTROLADOR
 int main(){
-    
-    printf("\n-----------------------------\n");
-    printf("NUMERON AUTOMATON\n");
-    printf("\n-----------------------------\n");
 
-    printf("DIGITE A CADEIA: ");
-    scanf(" %1023s", input);
-
-    if(parse()){
-        printf("CADEIA = ACEITA\n");
-    } else {
-        printf("CADEIA = REJEITADA\n");
+    for(int i = 0; i <= 100; i++){
+        download(i, 100);
+        usleep(10000);
     }
 
-    return 0;
+    printf("\n");
+    printf("====================================================================================================\n");
+    printf("||                                                                                        ||\n");
+    printf("||                                      [ MACHINE SPIRIT ONLINE ]                         ||\n");
+    printf("||                                                                                        ||\n");
+    printf("||        █████╗ ██╗   ██╗████████╗ ██████╗ ███╗   ███╗ █████╗ ████████╗ ██████╗          ||\n");
+    printf("||       ██╔══██╗██║   ██║╚══██╔══╝██╔═══██╗████╗ ████║██╔══██╗╚══██╔══╝██╔═══██╗         ||\n");
+    printf("||       ███████║██║   ██║   ██║   ██║   ██║██╔████╔██║███████║   ██║   ██║   ██║         ||\n");
+    printf("||       ██╔══██║██║   ██║   ██║   ██║   ██║██║╚██╔╝██║██╔══██║   ██║   ██║   ██║         ||\n");
+    printf("||       ██║  ██║╚██████╔╝   ██║   ╚██████╔╝██║ ╚═╝ ██║██║  ██║   ██║   ╚██████╔╝         ||\n");
+    printf("||       ╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝          ||\n");
+    printf("||                                                                                        ||\n");
+    printf("||                              >> TERMINAL DE CADEIAS <<                                ||\n");
+    printf("||                                                                                        ||\n");
+    printf("||          > AGUARDANDO INSTRUÇÕES DO OPERADOR...                                       ||\n");
+    printf("||          ╔══════════════════════════════════════════════════════╗                      ||\n");
+    printf("||          ║   [1] INICIAR INSERÇÃO DE CADEIAS                    ║                      ||\n");
+    printf("||          ║   [2] TERMINATE CONNECTION                           ║                      ||\n");
+    printf("||          ╚══════════════════════════════════════════════════════╝                      ||\n");
+    printf("||                                                                                        ||\n");
+    printf("\n====================================================================================================\n\n");
+
+    int opcao_user;
+
+    while(1){
+        printf("\n|| > ESCOLHA UMA DAS OPÇÕES: ");
+
+        if(scanf("%d", &opcao_user) != 1){
+            printf("> INVALID COMMAND.\n");
+            limpar_buffer();
+            continue;
+        }
+
+        limpar_buffer();
+
+        switch(opcao_user){
+            case 1:
+                printf("\n╔════════════════════════════════════════════════════╗\n");
+                printf("║                INPUT DAS CADEIAS                  ║\n");
+                printf("╚════════════════════════════════════════════════════╝\n");
+                printf("\n> INSIRA A CADEIA: ");
+
+                if(fgets(input, sizeof(input), stdin) == NULL){
+                    printf("\n[STATUS]: ERRO AO LER ENTRADA.\n");
+                    break;
+                }
+
+                input[strcspn(input, "\n")] = '\0';
+
+                if(parse()){
+                    printf("\n[STATUS]: \033[4mCADEIA ACEITA\033[0m\n");
+                    printf(" [RESULTADO]: ESTADO FINAL ALCANÇADO.\n");
+                } else {
+                    printf("\n[STATUS]: \033[4mCADEIA REJEITADA\033[0m\n");
+                    printf(" [RESULTADO]: TRANSICAO INVALIDA DETECTADA.\n");
+                }
+
+                break;
+
+            case 2:
+                printf("\n");
+                printf("███╗   ██╗██╗   ██╗███╗   ███╗███████╗██████╗  ██████╗ ███╗   ██╗\n");
+                printf("████╗  ██║██║   ██║████╗ ████║██╔════╝██╔══██╗██╔═══██╗████╗  ██║\n");
+                printf("██╔██╗ ██║██║   ██║██╔████╔██║█████╗  ██████╔╝██║   ██║██╔██╗ ██║\n");
+                printf("██║╚██╗██║██║   ██║██║╚██╔╝██║██╔══╝  ██╔══██╗██║   ██║██║╚██╗██║\n");
+                printf("██║ ╚████║╚██████╔╝██║ ╚═╝ ██║███████╗██║  ██║╚██████╔╝██║ ╚████║\n");
+                printf("╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝\n");
+                printf("\n");
+                printf("                  > OPERACAO FINALIZADA <\n");
+                printf("             > MACHINE SPIRIT SHUTTING DOWN <\n\n");
+                return 0;
+
+            default:
+                printf("> INVALID COMMAND.\n");
+        }
+    }
 }
